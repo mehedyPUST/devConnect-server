@@ -1,9 +1,3 @@
-import Groq from "groq-sdk";
-
-const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY,
-});
-
 // @desc    Generate project description
 // @route   POST /api/ai/generate-description
 // @access  Private
@@ -15,6 +9,16 @@ export const generateDescription = async (req, res, next) => {
             res.status(400);
             throw new Error("Project title is required");
         }
+
+        if (!process.env.GROQ_API_KEY) {
+            res.status(500);
+            throw new Error("AI service is not configured. Please add GROQ_API_KEY to environment variables.");
+        }
+
+        const GroqSDK = (await import("groq-sdk")).default;
+        const groqClient = new GroqSDK({
+            apiKey: process.env.GROQ_API_KEY,
+        });
 
         const techs = techStack?.length ? techStack.join(", ") : "various technologies";
         const keys = keywords || "";
@@ -32,7 +36,7 @@ Write a description that includes:
 
 Keep it professional, clear, and around 150-200 words. Do not use markdown formatting.`;
 
-        const completion = await groq.chat.completions.create({
+        const completion = await groqClient.chat.completions.create({
             messages: [
                 {
                     role: "system",
@@ -75,6 +79,16 @@ export const reviewProject = async (req, res, next) => {
             throw new Error("Title and description are required");
         }
 
+        if (!process.env.GROQ_API_KEY) {
+            res.status(500);
+            throw new Error("AI service is not configured. Please add GROQ_API_KEY to environment variables.");
+        }
+
+        const GroqSDK = (await import("groq-sdk")).default;
+        const groqClient = new GroqSDK({
+            apiKey: process.env.GROQ_API_KEY,
+        });
+
         const techs = techStack?.length ? techStack.join(", ") : "not specified";
 
         const prompt = `Review this developer project and provide constructive feedback:
@@ -91,7 +105,7 @@ Provide feedback in this format:
 
 Keep feedback constructive, professional, and actionable.`;
 
-        const completion = await groq.chat.completions.create({
+        const completion = await groqClient.chat.completions.create({
             messages: [
                 {
                     role: "system",
