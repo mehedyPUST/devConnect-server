@@ -18,6 +18,8 @@ import postRoutes from "./routes/posts.js";
 import messageRoutes from "./routes/messages.js";
 import notificationRoutes from "./routes/notifications.js";
 import uploadRoutes from "./routes/upload.js";
+import aiRoutes from "./routes/ai.js";
+
 
 
 dotenv.config();
@@ -58,6 +60,11 @@ app.use("/api/posts", postRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/ai", aiRoutes);
+
+
+
+
 // Health check
 app.get("/", (req, res) => {
     res.json({
