@@ -9,10 +9,15 @@ import { Server } from "socket.io";
 
 import connectDB from "./config/db.js";
 import { errorHandler } from "./middleware/errorHandler.js";
-import userRoutes from "./routes/users.js";
+
+
+
 
 // Routes
 import authRoutes from "./routes/auth.js";
+import userRoutes from "./routes/users.js";
+import projectRoutes from "./routes/projects.js";
+
 // import userRoutes from "./routes/users.js";
 // import projectRoutes from "./routes/projects.js";
 
@@ -49,7 +54,7 @@ app.use(
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-// app.use("/api/projects", projectRoutes);
+app.use("/api/projects", projectRoutes);
 
 
 
