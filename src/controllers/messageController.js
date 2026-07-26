@@ -14,14 +14,12 @@ export const createOrGetConversation = async (req, res, next) => {
             throw new Error("Receiver ID is required");
         }
 
-        // Check if receiver exists
         const receiver = await User.findById(receiverId);
         if (!receiver) {
             res.status(404);
             throw new Error("Receiver not found");
         }
 
-        // Check if conversation already exists
         let conversation = await Conversation.findOne({
             participants: {
                 $all: [req.user._id, receiverId],
@@ -36,7 +34,6 @@ export const createOrGetConversation = async (req, res, next) => {
             });
         }
 
-        // Create new conversation
         conversation = await Conversation.create({
             participants: [req.user._id, receiverId],
         });
@@ -63,7 +60,6 @@ export const getConversations = async (req, res, next) => {
             .populate("participants", "name username avatar")
             .sort({ updatedAt: -1 });
 
-        // Get unread count for each conversation
         const conversationsWithUnread = await Promise.all(
             conversations.map(async (conv) => {
                 const unreadCount = await Message.countDocuments({
@@ -106,7 +102,6 @@ export const sendMessage = async (req, res, next) => {
         if (conversationId) {
             conversation = await Conversation.findById(conversationId);
         } else {
-            // Find or create conversation
             conversation = await Conversation.findOne({
                 participants: { $all: [req.user._id, receiverId], $size: 2 },
             });
@@ -125,7 +120,6 @@ export const sendMessage = async (req, res, next) => {
             text,
         });
 
-        // Update last message
         conversation.lastMessage = {
             text,
             sender: req.user._id,
@@ -137,7 +131,7 @@ export const sendMessage = async (req, res, next) => {
             .populate("sender", "name username avatar")
             .populate("receiver", "name username avatar");
 
-        // Send real-time notification via Socket.io
+        // Send real-time via Socket.io
         const io = req.app.get("io");
         if (io) {
             io.to(receiverId.toString()).emit("newMessage", populatedMessage);
@@ -149,6 +143,7 @@ export const sendMessage = async (req, res, next) => {
                     avatar: req.user.avatar,
                 },
                 text: `New message from ${req.user.name}`,
+                link: "/messages",
                 createdAt: new Date(),
             });
         }
@@ -174,7 +169,6 @@ export const getMessages = async (req, res, next) => {
             .populate("receiver", "name username avatar")
             .sort({ createdAt: 1 });
 
-        // Mark messages as read
         await Message.updateMany(
             {
                 conversation: req.params.conversationId,

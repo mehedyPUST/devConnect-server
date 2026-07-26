@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { createNotification } from "./notificationController.js";
 
 // @desc    Get user profile by username
 // @route   GET /api/users/:username
@@ -45,7 +46,6 @@ export const updateProfile = async (req, res, next) => {
         user.website = req.body.website || user.website;
         user.avatar = req.body.avatar || user.avatar;
 
-        // Allow username change only if it's different and available
         if (req.body.username && req.body.username !== user.username) {
             const usernameExists = await User.findOne({ username: req.body.username });
             if (usernameExists) {
@@ -95,6 +95,31 @@ export const followUser = async (req, res, next) => {
         await currentUser.save();
         await userToFollow.save();
 
+        // Send notification
+        await createNotification({
+            recipient: userToFollow._id,
+            sender: currentUser._id,
+            type: "follow",
+            text: `${currentUser.name} started following you`,
+            link: `/profile/${currentUser.username}`,
+        });
+
+        // Send real-time notification via socket
+        const io = req.app.get("io");
+        if (io) {
+            io.to(userToFollow._id.toString()).emit("newNotification", {
+                type: "follow",
+                from: {
+                    _id: currentUser._id,
+                    name: currentUser.name,
+                    avatar: currentUser.avatar,
+                },
+                text: `${currentUser.name} started following you`,
+                link: `/profile/${currentUser.username}`,
+                createdAt: new Date(),
+            });
+        }
+
         res.status(200).json({
             success: true,
             message: `You are now following ${userToFollow.username}`,
@@ -142,7 +167,7 @@ export const unfollowUser = async (req, res, next) => {
     }
 };
 
-// @desc    Get all users (for admin or search later)
+// @desc    Get all users (admin)
 // @route   GET /api/users
 // @access  Private/Admin
 export const getAllUsers = async (req, res, next) => {

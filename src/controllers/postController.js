@@ -1,5 +1,6 @@
 import Post from "../models/Post.js";
 import User from "../models/User.js";
+import { createNotification } from "./notificationController.js";
 
 // @desc    Create a post
 // @route   POST /api/posts
@@ -59,7 +60,6 @@ export const getFeed = async (req, res, next) => {
     try {
         const currentUser = await User.findById(req.user._id);
 
-        // Get posts from users I follow + my own posts
         const followingIds = [...currentUser.following, req.user._id];
 
         const posts = await Post.find({ author: { $in: followingIds } })
@@ -112,7 +112,6 @@ export const deletePost = async (req, res, next) => {
             throw new Error("Post not found");
         }
 
-        // Only author or admin can delete
         if (
             post.author.toString() !== req.user._id.toString() &&
             req.user.role !== "admin"
@@ -156,6 +155,33 @@ export const likePost = async (req, res, next) => {
 
         await post.save();
 
+        // Send notification when liking
+        if (!alreadyLiked) {
+            await createNotification({
+                recipient: post.author,
+                sender: req.user._id,
+                type: "like_post",
+                text: `${req.user.name} liked your post`,
+                link: `/post/${post._id}`,
+            });
+
+            // Real-time notification
+            const io = req.app.get("io");
+            if (io) {
+                io.to(post.author.toString()).emit("newNotification", {
+                    type: "like_post",
+                    from: {
+                        _id: req.user._id,
+                        name: req.user.name,
+                        avatar: req.user.avatar,
+                    },
+                    text: `${req.user.name} liked your post`,
+                    link: `/post/${post._id}`,
+                    createdAt: new Date(),
+                });
+            }
+        }
+
         res.status(200).json({
             success: true,
             likes: post.likes.length,
@@ -191,6 +217,31 @@ export const addPostComment = async (req, res, next) => {
         });
 
         await post.save();
+
+        // Send notification
+        await createNotification({
+            recipient: post.author,
+            sender: req.user._id,
+            type: "comment_post",
+            text: `${req.user.name} commented on your post`,
+            link: `/post/${post._id}`,
+        });
+
+        // Real-time notification
+        const io = req.app.get("io");
+        if (io) {
+            io.to(post.author.toString()).emit("newNotification", {
+                type: "comment_post",
+                from: {
+                    _id: req.user._id,
+                    name: req.user.name,
+                    avatar: req.user.avatar,
+                },
+                text: `${req.user.name} commented on your post`,
+                link: `/post/${post._id}`,
+                createdAt: new Date(),
+            });
+        }
 
         const updatedPost = await Post.findById(req.params.id)
             .populate("author", "name username avatar")

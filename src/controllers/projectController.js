@@ -1,4 +1,5 @@
 import Project from "../models/Project.js";
+import { createNotification } from "./notificationController.js";
 
 // @desc    Create new project
 // @route   POST /api/projects
@@ -84,7 +85,6 @@ export const updateProject = async (req, res, next) => {
             throw new Error("Project not found");
         }
 
-        // Check ownership
         if (project.owner.toString() !== req.user._id.toString() && req.user.role !== "admin") {
             res.status(403);
             throw new Error("Not authorized to update this project");
@@ -156,6 +156,33 @@ export const likeProject = async (req, res, next) => {
 
         await project.save();
 
+        // Send notification only when liking (not unliking)
+        if (!alreadyLiked) {
+            await createNotification({
+                recipient: project.owner,
+                sender: req.user._id,
+                type: "like_project",
+                text: `${req.user.name} liked your project "${project.title}"`,
+                link: `/project/${project._id}`,
+            });
+
+            // Real-time notification
+            const io = req.app.get("io");
+            if (io) {
+                io.to(project.owner.toString()).emit("newNotification", {
+                    type: "like_project",
+                    from: {
+                        _id: req.user._id,
+                        name: req.user.name,
+                        avatar: req.user.avatar,
+                    },
+                    text: `${req.user.name} liked your project "${project.title}"`,
+                    link: `/project/${project._id}`,
+                    createdAt: new Date(),
+                });
+            }
+        }
+
         res.status(200).json({
             success: true,
             likes: project.likes.length,
@@ -192,6 +219,31 @@ export const addComment = async (req, res, next) => {
 
         project.comments.unshift(comment);
         await project.save();
+
+        // Send notification
+        await createNotification({
+            recipient: project.owner,
+            sender: req.user._id,
+            type: "comment_project",
+            text: `${req.user.name} commented on your project "${project.title}"`,
+            link: `/project/${project._id}`,
+        });
+
+        // Real-time notification
+        const io = req.app.get("io");
+        if (io) {
+            io.to(project.owner.toString()).emit("newNotification", {
+                type: "comment_project",
+                from: {
+                    _id: req.user._id,
+                    name: req.user.name,
+                    avatar: req.user.avatar,
+                },
+                text: `${req.user.name} commented on your project "${project.title}"`,
+                link: `/project/${project._id}`,
+                createdAt: new Date(),
+            });
+        }
 
         const updatedProject = await Project.findById(req.params.id).populate(
             "comments.user",
