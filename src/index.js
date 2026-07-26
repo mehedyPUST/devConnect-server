@@ -1,5 +1,7 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -20,9 +22,6 @@ import notificationRoutes from "./routes/notifications.js";
 import uploadRoutes from "./routes/upload.js";
 import aiRoutes from "./routes/ai.js";
 
-
-
-dotenv.config();
 connectDB();
 
 const app = express();
@@ -62,9 +61,6 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/ai", aiRoutes);
 
-
-
-
 // Health check
 app.get("/", (req, res) => {
     res.json({
@@ -80,19 +76,16 @@ app.use(errorHandler);
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 
-    // Join user's personal room
     socket.on("join", (userId) => {
         socket.join(userId);
         console.log(`User ${userId} joined their room`);
     });
 
-    // Join conversation room
     socket.on("joinConversation", (conversationId) => {
         socket.join(conversationId);
         console.log(`User joined conversation: ${conversationId}`);
     });
 
-    // Send message in real-time
     socket.on("sendMessage", (message) => {
         io.to(message.conversationId).emit("receiveMessage", message);
     });
