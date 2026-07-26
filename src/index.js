@@ -17,6 +17,8 @@ import projectRoutes from "./routes/projects.js";
 import postRoutes from "./routes/posts.js";
 import messageRoutes from "./routes/messages.js";
 import notificationRoutes from "./routes/notifications.js";
+import uploadRoutes from "./routes/upload.js";
+
 
 dotenv.config();
 connectDB();
@@ -55,7 +57,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/notifications", notificationRoutes);
-
+app.use("/api/upload", uploadRoutes);
 // Health check
 app.get("/", (req, res) => {
     res.json({
